@@ -5,7 +5,8 @@ first-time visitor on a phone into a customer: **Directions**, **LINE**, **Call*
 
 - Plain HTML, CSS and JavaScript. **No build step, no frameworks, no trackers, no CDN.**
 - **Everything shop-specific is in one file: [`site/config.js`](site/config.js).**
-- Drag the `site` folder onto Netlify and it's live.
+- Drag the `site` folder onto Netlify, or deploy it with the Vercel CLI, and it's live.
+- **Live demo:** https://sample-cafe-bangkok.vercel.app
 
 All content is fictional demo content for "Sample Cafe". Put a real shop's details in only with the
 owner's permission.
@@ -16,7 +17,8 @@ sample-cafe/
 │   ├── config.js          ← edit this for each shop
 │   ├── index.html         ← page skeleton (filled from config by the bake step)
 │   ├── 404.html           ← "page not found" (generated)
-│   ├── netlify.toml       ← security + cache headers
+│   ├── netlify.toml       ← security + cache headers (Netlify)
+│   ├── vercel.json        ← the same headers (Vercel)
 │   ├── css/  js/  assets/ ← styles, scripts, fonts, photos
 │   └── robots.txt, sitemap.xml, site.webmanifest, icons (generated)
 ├── images-src/            ← original photos (NOT uploaded; tools/images.py makes web versions)
@@ -95,7 +97,7 @@ Tick every line before showing a client.
 **Files**
 - [ ] Old demo photos removed from `images-src/` and replaced with the shop's photos
 - [ ] `python tools/images.py` then `node tools/bake.mjs` run, with no warnings left
-- [ ] `netlify.toml` `frame-src` matches `location.embed` (OSM or Google)
+- [ ] `frame-src` in `netlify.toml` / `vercel.json` matches `location.embed` (OSM or Google)
 - [ ] After deploy: link preview tested by sending the URL to yourself in LINE
 
 ### About reviews
@@ -170,6 +172,35 @@ original.
    automatic.
 
 Updating later: edit config → bake → drag the `site` folder onto the site's **Deploys** page.
+
+> **Note (November 2026):** Netlify's free plan now adds a "Hosted on Netlify" badge script to
+> every page. This site's security policy blocks it, so the badge doesn't show, but the browser
+> console logs 2 errors and Lighthouse Best Practices drops to about 92. A paid Netlify plan can
+> switch the badge off. Otherwise use Vercel (below), which adds nothing to the page.
+
+## Deploy to Vercel (what the demo uses)
+
+The demo is live at **https://sample-cafe-bangkok.vercel.app**. `site/vercel.json` holds the
+same security and cache headers as `netlify.toml`. `site/.vercelignore` keeps tool files out of
+the upload.
+
+```bash
+npx vercel@latest login                                    # once, opens the browser
+cd site
+npx vercel@latest link --yes --project <shop-name>         # once per shop
+npx vercel@latest build --prod
+npx vercel@latest deploy --prebuilt --prod --yes
+```
+
+1. The last command prints the live address (`Aliased https://…vercel.app`). If the name you
+   wanted was taken, Vercel adds a word to it (e.g. `-peach`). For a nicer address, run
+   `npx vercel@latest domains add <nice-name>.vercel.app <shop-name>` and deploy again.
+2. Put that address in `site.url` in `config.js`, run `node tools/bake.mjs`, and repeat the last
+   two commands.
+3. Check the headers: `curl -I https://<address>` should show `content-security-policy`.
+
+Vercel's free (Hobby) plan is for **non-commercial** use. That's fine for this demo and your
+portfolio. A paying client's site needs Vercel Pro, or Netlify.
 
 ---
 

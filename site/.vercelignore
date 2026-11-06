@@ -1,0 +1,5 @@
+# Files Vercel should not upload or publish.
+.netlify
+.env*
+.gitignore
+netlify.toml

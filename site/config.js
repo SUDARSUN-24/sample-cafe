@@ -18,7 +18,7 @@
 window.SHOP_CONFIG = {
   /* ---------------------------------------------------------------- 1. SITE */
   site: {
-    url: "https://sample-cafe-demo.netlify.app", // CHANGE-ME: final address, no trailing slash
+    url: "https://sample-cafe-bangkok.vercel.app", // CHANGE-ME: final address, no trailing slash
     defaultLang: "th",                            // first language shown to new visitors
     demoNotice: true,                             // CHANGE-ME: set false for a real shop
     credit: { text: "Website by Sun", url: "" },  // footer credit (url optional)
