@@ -1,0 +1,47 @@
+/* 404.css — only for the "page not found" page (404.html). Builds on styles.css. */
+.nf {
+  min-height: 100svh;
+  display: grid; place-items: center;
+  background: var(--grain) repeat var(--c-dark); background-size: 160px;
+  color: var(--c-on-dark);
+  text-align: center;
+}
+.nf__main { width: 100%; max-width: 36rem; padding: 3rem var(--gutter); }
+.nf__cup { position: relative; width: 7.5rem; margin: 0 auto 1rem; }
+.nf__cup-svg { width: 100%; overflow: visible; }
+.nf__cup-svg path { fill: var(--c-on-dark); stroke: var(--c-on-dark); }
+.nf__cup-svg path:first-child { stroke: none; }
+.nf__coffee { fill: var(--c-accent); }
+/* Steam: three soft lines that rise and fade (transform + opacity only). */
+.nf__steam {
+  position: absolute; bottom: 78%; width: 0.35rem; height: 2.5rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(to top, color-mix(in srgb, var(--c-on-dark) 55%, transparent), transparent);
+  animation: steam 2.8s ease-in-out infinite;
+  opacity: 0;
+}
+.nf__steam:nth-child(1) { left: 30%; }
+.nf__steam:nth-child(2) { left: 44%; animation-delay: 0.9s; }
+.nf__steam:nth-child(3) { left: 58%; animation-delay: 1.8s; }
+@keyframes steam {
+  0% { opacity: 0; transform: translate3d(0, 0.75rem, 0) scaleY(0.6); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(0.35rem, -1.5rem, 0) scaleY(1.1); }
+}
+.nf__code {
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 3rem + 8vw, 8rem); line-height: 1;
+  color: var(--c-on-dark-soft);
+  letter-spacing: -0.02em;
+}
+.nf__title { margin-top: 0.75rem; font-family: var(--font-display); font-size: var(--step-4); font-weight: 500; line-height: var(--lh-heading); }
+.nf__text { margin: 1rem auto 0; max-width: 28rem; color: var(--c-on-dark-soft); font-size: var(--step-1); }
+.nf__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.75rem; margin-top: 2rem; }
+.nf__brand { margin-top: 3rem; font-family: var(--font-display); color: var(--c-on-dark-soft); }
+.nf__main > * { animation: rise 0.9s var(--ease-out) both; }
+.nf__main > :nth-child(2) { animation-delay: 0.08s; }
+.nf__main > :nth-child(3) { animation-delay: 0.16s; }
+.nf__main > :nth-child(4) { animation-delay: 0.24s; }
+.nf__main > :nth-child(5) { animation-delay: 0.32s; }
+.nf__main > :nth-child(6) { animation-delay: 0.4s; }
+@media (prefers-reduced-motion: reduce) { .nf__steam { display: none; } }

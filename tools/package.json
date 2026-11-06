@@ -1,0 +1,10 @@
+{
+  "name": "sample-cafe-tests",
+  "private": true,
+  "description": "Test tools only. Not needed to build or deploy the site. Install with: npm install (inside /tools)",
+  "devDependencies": {
+    "axe-core": "4.14.0",
+    "lighthouse": "13.6.0",
+    "playwright-core": "1.65.0"
+  }
+}
