@@ -231,3 +231,29 @@ Tip: keep `tools/node_modules` out of OneDrive, or pause syncing while installin
 | Map preview stays blank after tapping | `frame-src` in `netlify.toml` must include the map site you chose in `location.embed`. |
 | "Open now" is wrong | Check `hours.weekly` uses 24-hour `"HH:MM"`; the time zone is `Asia/Bangkok`. |
 | A word (e.g. "Müller", "€", Japanese) shows in a different-looking font | The fonts include all Thai letters but only basic English letters and a few symbols, so other characters fall back to the phone's font. See "Fonts" in HOW_IT_WORKS.md to add them. |
+
+## Voice concierge (free, optional)
+
+A "Talk to us" button: visitors speak or type in Thai or English, the
+assistant answers out loud, and the page reacts while it talks: it highlights
+a menu item, opens the map, switches language and builds a pre-order card
+with a "Send on LINE" button. Nothing is ordered or paid automatically.
+
+It costs nothing and needs no account, API key or server. Hearing and
+speaking use the visitor's own browser; the answers come from `config.js`
+(menu, prices, hours, location) plus the `concierge.faq` list, where you add
+the shop's own questions and answers. It is keyword matching, not AI: it
+handles questions about the shop and pre-orders, and says so when it does not
+understand.
+
+- Voice input works in Chrome, Edge and Safari. Other browsers (Firefox) get
+  the same assistant as a text chat.
+- Spoken replies need a voice for the language on the visitor's device. If
+  there is no Thai voice, Thai replies are shown as text only.
+- With voice, the browser may send audio to its own provider (Google, Apple)
+  to turn it into text. The panel says so before the microphone starts. For
+  a real shop, mention it in the shop's privacy notice.
+- The security headers (`vercel.json`, `netlify.toml`) allow the microphone
+  on this site only (`microphone=(self)`).
+- Turn it off with `concierge.enabled: false`. Tests:
+  `node tools/tests/concierge.mjs`.

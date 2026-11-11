@@ -5,7 +5,7 @@
   config.js by tools/bake.mjs (templates in js/render.js). Don't edit inside
   those pairs by hand: edit config.js, then run "node tools/bake.mjs".
 -->
-<html lang="th" data-build="miamri">
+<html lang="th" data-build="94n6r5">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,6 +13,7 @@
 <link rel="preload" href="assets/fonts/ibm-plex-sans-thai-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/shop.generated.css">
+<link rel="stylesheet" href="css/concierge.css">
 <!-- boot.js runs before the page paints: it applies the saved language and turns on animations. -->
 <script src="js/boot.js"></script>
 <!--render:head-->
@@ -107,5 +108,7 @@
 <script src="js/render.js" defer></script>
 <script src="js/hours.js" defer></script>
 <script src="js/main.js" defer></script>
+<!-- Voice concierge: free, runs in the browser. Turn it off with concierge.enabled in config.js. -->
+<script src="js/concierge.js" defer></script>
 </body>
 </html>
