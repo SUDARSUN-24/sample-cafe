@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* tools/tests/concierge.mjs — checks the voice concierge's brain and panel.
-     node tools/serve.mjs          (in another terminal)
+     node tools/serve.mjs --test   (in another terminal)
      node tools/tests/concierge.mjs [--shots folder]
    Sends sentences to the assistant as if they were typed or spoken and checks
    what it answers and what the page does. The clock is fixed to a Thursday
@@ -28,6 +28,8 @@ async function newPage(options = {}, when = "2026-11-12T10:00:00+07:00") {
     document.addEventListener("securitypolicyviolation", (e) => window.__csp.push(e.violatedDirective + " " + e.blockedURI));
   });
   const page = await ctx.newPage();
+  // The local server (node tools/serve.mjs --test) gets the same fixed clock as the page, on /api calls only.
+  await page.route("**/api/**", (r) => r.continue({ headers: { ...r.request().headers(), "x-test-now": when } }));
   await page.clock.install({ time: new Date(when) });
   page.__errors = [];
   page.on("pageerror", (e) => page.__errors.push(e.message));
@@ -91,7 +93,7 @@ const settle = async (page) => { await page.clock.runFor(200); await new Promise
   check("TH: an item can be taken off (back to 305)", o.total === 305 && o.lines.length === 2, JSON.stringify(o));
 
   a = await ask(page, "แค่นี้ค่ะ");
-  check("TH: finishing tells the visitor to tap Send on LINE and that it is not sent yet", /ส่งทางไลน์/.test(a) && /ยังไม่ได้ส่ง/.test(a), a);
+  check("TH: finishing tells the visitor how to send it and that it is not sent yet", /ยืนยันสั่งซื้อ|ส่งทางไลน์/.test(a) && /ยังไม่ได้ส่ง/.test(a), a);
   const href = await page.getAttribute(".cg-order__send", "href");
   check("the Send on LINE link carries the order text", href.startsWith("https://line.me/R/oaMessage/") && decodeURIComponent(href).includes("305"), href);
   await settle(page);
@@ -150,7 +152,7 @@ const settle = async (page) => { await page.clock.runFor(200); await new Promise
   check("EN: adds items with a quantity, pickup time and name (85 + 150 = 235)",
     o && o.total === 235 && o.pickup === "15:00" && o.name === "Mali" && o.lines.join("|") === "1 House Latte iced|2 Butter Croissant", JSON.stringify(o) + " " + a);
   a = await ask(page, "that's all");
-  check("EN: finishing points to Send on LINE", /Send on LINE/.test(a) && /isn't sent/.test(a), a);
+  check("EN: finishing says how to send it", /Place order|Send on LINE/.test(a) && /isn't sent/.test(a), a);
   await settle(page);
   await shot(page, "desktop-order");
   a = await ask(page, "how much is the matcha latte");

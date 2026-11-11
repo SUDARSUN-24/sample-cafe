@@ -7,3 +7,6 @@ Thumbs.db
 
 # Local Netlify folder
 .netlify
+
+# The staff key for /admin.html (also set as ADMIN_KEY on Netlify). Never commit it.
+ADMIN-KEY.txt

@@ -1,6 +1,14 @@
-# netlify.toml — server settings for Netlify. Lives inside /site because
-# /site is the folder you drag onto Netlify (it must be at the root of that folder).
+# netlify.toml — settings for Netlify: which folder is the website, where the
+# backend functions are, and the security + cache headers.
+# Deploy from the project folder:  npx netlify-cli deploy --prod
 # After deploying, check the headers really arrived:  curl -I https://YOUR-SITE.netlify.app
+
+[build]
+  publish = "site"          # the website itself
+
+[functions]
+  directory = "netlify/functions"   # the booking + order backend (/api/*)
+  node_bundler = "esbuild"
 
 # ---------------------------------------------------------------- security
 [[headers]]
@@ -11,6 +19,8 @@
     #  - img data: — the tiny blurred photo placeholders are data: URIs.
     #  - frame-src — the map preview (OpenStreetMap, or Google if location.embed = "google").
     #    If you never use one of them, you can delete it from this line.
+    #  - connect-src 'self' — the page may only call this site's own /api (bookings, orders).
+    #  - microphone=(self) below — the voice concierge may use the microphone on this site only.
     #  - frame-ancestors 'none' — nobody may show this site inside their own frame (anti-clickjacking).
     Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'self'; manifest-src 'self'; frame-src https://www.openstreetmap.org https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
     X-Content-Type-Options = "nosniff"

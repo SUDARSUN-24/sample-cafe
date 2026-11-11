@@ -1,0 +1,66 @@
+/* =============================================================================
+   booking.css — the "Reserve a table" section (see js/booking.js) and the
+   shared form fields. Uses the theme variables, so it follows the theme.
+   ========================================================================== */
+.book__grid { display: grid; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: start; }
+@media (min-width: 900px) { .book__grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+.book__note { display: flex; gap: 0.6rem; margin-top: 1.5rem; max-width: 34rem; color: var(--c-ink-soft); font-size: var(--step--1); line-height: 1.6; }
+.book__note .icon { margin-top: 0.2em; }
+
+.book {
+  padding: clamp(1.1rem, 3vw, 1.75rem);
+  border-radius: var(--radius-lg);
+  background: var(--c-bg-alt);
+  box-shadow: var(--shadow-1);
+}
+.book__form, .book__done { display: grid; gap: 1rem; }
+.book__form[hidden], .book__done[hidden], .book__offline[hidden], .manage[hidden] { display: none; }
+.book__row { display: grid; gap: 1rem; }
+@media (min-width: 520px) { .book__row { grid-template-columns: 1fr 1fr; } }
+
+.field { display: grid; gap: 0.35rem; min-width: 0; }
+.field__label { font-size: 0.875rem; font-weight: 600; color: var(--c-ink); }
+.field__input {
+  width: 100%; min-height: 3rem; padding: 0.55rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--c-ink) 45%, transparent); border-radius: var(--radius-sm);
+  background: var(--c-bg); color: var(--c-ink);
+  font: inherit; font-size: 1rem; /* 16px: iOS does not zoom the page on focus */
+}
+.field__input:focus-visible, .slot:focus-visible { outline: 3px solid var(--c-ink); outline-offset: 2px; }
+
+/* Times: a wrapping row of buttons that behave like radio buttons. */
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr)); gap: 0.45rem; }
+.slot {
+  min-height: 2.75rem; padding: 0.3rem 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--c-ink) 45%, transparent); border-radius: var(--radius-sm);
+  background: var(--c-bg); color: var(--c-ink);
+  font: inherit; font-size: 0.9375rem; font-variant-numeric: tabular-nums; cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s var(--ease-out);
+}
+.slot[aria-checked="true"] { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-accent-ink); font-weight: 600; }
+.slot:disabled { border-style: dashed; border-color: color-mix(in srgb, var(--c-ink) 20%, transparent); color: var(--c-ink-soft); text-decoration: line-through; cursor: not-allowed; }
+.slot:active:not(:disabled) { transform: scale(0.96); }
+
+.book__hint, .book__privacy { font-size: 0.8125rem; line-height: 1.55; color: var(--c-ink-soft); }
+.book__hint:empty, .book__error:empty { display: none; }
+.book__error { padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); background: var(--c-sand); color: var(--c-ink); font-size: 0.9375rem; font-weight: 500; }
+.book__submit { justify-self: start; }
+
+.book__offline { display: grid; gap: 1rem; }
+.book__offline-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.book__done:focus { outline: none; }
+.book__done-title { display: flex; align-items: center; gap: 0.5rem; font-family: var(--font-display); font-size: var(--step-2); font-weight: 500; }
+.book__done-when { font-size: var(--step-1); }
+.book__code { display: grid; gap: 0.15rem; padding: 0.85rem 1rem; border-radius: var(--radius); background: var(--c-bg); }
+.book__code span { font-size: 0.8125rem; color: var(--c-ink-soft); }
+.book__code strong { font-size: 1.75rem; letter-spacing: 0.12em; font-variant-numeric: tabular-nums; }
+.book__done .btn { justify-self: start; }
+
+.manage { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid color-mix(in srgb, var(--c-ink) 15%, transparent); }
+.manage > summary { min-height: 2.75rem; display: flex; align-items: center; cursor: pointer; font-size: 0.9375rem; font-weight: 500; color: var(--c-accent); text-decoration: underline; text-underline-offset: 0.2em; list-style: none; }
+.manage > summary::-webkit-details-marker { display: none; }
+.manage[open] { display: grid; gap: 0.85rem; }
+.manage .btn { justify-self: start; }
+.manage__result { font-size: 0.9375rem; line-height: 1.6; }
+.manage__result:empty { display: none; }

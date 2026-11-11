@@ -25,6 +25,7 @@
     navLabel: { th: "เมนูหลัก", en: "Main" },
     navFind: { th: "วิธีมาร้าน", en: "Find us" },
     navMenu: { th: "เมนู", en: "Menu" },
+    navBook: { th: "จองโต๊ะ", en: "Book" },
     navStory: { th: "เรื่องของเรา", en: "Story" },
     navGallery: { th: "บรรยากาศ", en: "Gallery" },
     navContact: { th: "ติดต่อ", en: "Contact" },
@@ -85,6 +86,37 @@
     demoNotice: { th: "เว็บไซต์ตัวอย่าง ข้อมูลร้านทั้งหมดเป็นข้อมูลสมมุติ", en: "Demo website — all shop details are fictional" },
     backToTop: { th: "กลับขึ้นด้านบน", en: "Back to top" },
     newTab: { th: "(เปิดในแท็บใหม่)", en: "(opens in a new tab)" },
+    // Booking section (js/booking.js)
+    bookEyebrow: { th: "จองโต๊ะ", en: "Reserve" },
+    bookParty: { th: "จำนวนคน", en: "Guests" },
+    bookDate: { th: "วันที่", en: "Date" },
+    bookTime: { th: "เวลา", en: "Time" },
+    bookName: { th: "ชื่อ", en: "Name" },
+    bookPhone: { th: "เบอร์โทร", en: "Phone" },
+    bookNote: { th: "หมายเหตุ (ถ้ามี)", en: "Note (optional)" },
+    bookSubmit: { th: "ยืนยันการจอง", en: "Confirm booking" },
+    bookLoading: { th: "กำลังดูเวลาว่าง…", en: "Checking free times…" },
+    bookNoSlots: { th: "วันนี้ไม่มีเวลาว่างแล้ว ลองเลือกวันอื่น", en: "No free times left that day. Try another date." },
+    bookPrivacy: {
+      th: "ใช้ชื่อและเบอร์โทรเพื่อการจองนี้เท่านั้น และลบภายใน 30 วันหลังวันจอง",
+      en: "Your name and phone are used for this booking only, and deleted within 30 days of the visit.",
+    },
+    bookOffline: {
+      th: "ตอนนี้จองออนไลน์ไม่ได้ ทักไลน์หรือโทรมาจองได้เลย",
+      en: "Online booking isn't available right now. Please book on LINE or by phone.",
+    },
+    bookDoneTitle: { th: "จองเรียบร้อยแล้ว", en: "You're booked" },
+    bookDoneCode: { th: "รหัสการจอง", en: "Booking code" },
+    bookDoneKeep: {
+      th: "เก็บรหัสนี้ไว้ ใช้คู่กับเบอร์โทรเพื่อตรวจสอบหรือยกเลิก",
+      en: "Keep this code. With your phone number, it lets you check or cancel the booking.",
+    },
+    bookAgain: { th: "จองอีกรายการ", en: "Make another booking" },
+    manageTitle: { th: "ตรวจสอบหรือยกเลิกการจอง / ออเดอร์", en: "Check or cancel a booking or order" },
+    manageCode: { th: "รหัส", en: "Code" },
+    manageCheck: { th: "ตรวจสอบ", en: "Check" },
+    manageCancel: { th: "ยกเลิกรายการนี้", en: "Cancel this" },
+    guests: { th: "ท่าน", en: "guests" },
   };
 
   const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -225,9 +257,21 @@
   /* ------------------------------------------------------------- sections */
   const sections = {};
 
+  const bookingOn = (c) => !!(c.booking && c.booking.enabled);
+  // "01", "02"… in page order, skipping sections that are switched off.
+  function num(c, id) {
+    const order = ["find", "signature", "menu", bookingOn(c) && "booking", "story", "gallery",
+      c.reviews && c.reviews.items && c.reviews.items.length && "reviews", "contact"].filter(Boolean);
+    return String(order.indexOf(id) + 1).padStart(2, "0");
+  }
+  function navLinks(c, S) {
+    return [["find", S.navFind], ["menu", S.navMenu], bookingOn(c) && ["booking", S.navBook], ["story", S.navStory],
+      ["gallery", S.navGallery], ["contact", S.navContact]].filter(Boolean);
+  }
+
   sections.header = function (c) {
     const S = strings(c);
-    const links = [["find", S.navFind], ["menu", S.navMenu], ["story", S.navStory], ["gallery", S.navGallery], ["contact", S.navContact]];
+    const links = navLinks(c, S);
     return (
       `<div class="site-header__bg" aria-hidden="true"></div>` +
       `<div class="site-header__inner container">` +
@@ -251,7 +295,7 @@
 
   sections.mobileMenu = function (c) {
     const S = strings(c);
-    const links = [["find", S.navFind], ["menu", S.navMenu], ["story", S.navStory], ["gallery", S.navGallery], ["contact", S.navContact]];
+    const links = navLinks(c, S);
     return (
       `<div class="sheet__inner">` +
       `<div class="sheet__top"><p class="sheet__brand">${t(c.business.name)}</p>` +
@@ -316,7 +360,7 @@
     const addr = both(loc.address);
     return (
       `<div class="container">` +
-      sectionHead("01", S.findEyebrow, S.findTitle, "find-title", loc.address) +
+      sectionHead(num(c, "find"), S.findEyebrow, S.findTitle, "find-title", loc.address) +
       `<div class="find__grid">` +
       `<ol class="steps" role="list">${steps}</ol>` +
       `<div class="find__card reveal">` +
@@ -356,7 +400,7 @@
       .join("");
     return (
       `<div class="container">` +
-      sectionHead("02", S.sigEyebrow, sig.title, "signature-title", sig.intro) +
+      sectionHead(num(c, "signature"), S.sigEyebrow, sig.title, "signature-title", sig.intro) +
       `</div>` +
       // On phones this row scrolls sideways (CSS scroll-snap); on bigger screens it's a grid.
       // tabindex=0 lets keyboard users focus the row and scroll it with the arrow keys.
@@ -394,7 +438,7 @@
       .join("");
     return (
       `<div class="container">` +
-      sectionHead("03", S.menuEyebrow, m.title, "menu-title") +
+      sectionHead(num(c, "menu"), S.menuEyebrow, m.title, "menu-title") +
       `<div class="tabs reveal" data-tabs>` +
       `<div class="tabs__bar"><div class="tabs__list" role="tablist" ${attr("aria-label", S.menuTabs)}>${tabs}` +
       `<span class="tabs__indicator" aria-hidden="true"></span></div></div>` +
@@ -405,6 +449,65 @@
     );
   };
 
+  // Table booking. The form is filled in and sent by js/booking.js; until that
+  // script has reached the backend, only the "book on LINE" fallback shows.
+  sections.booking = function (c) {
+    if (!bookingOn(c)) return "";
+    const S = strings(c);
+    const b = c.booking;
+    const field = (id, label, control) => `<div class="field"><label class="field__label" for="${id}">${t(label)}</label>${control}</div>`;
+    const party = Array.from({ length: b.maxParty || 6 }, (_, i) => `<option value="${i + 1}"${i === 1 ? " selected" : ""}>${i + 1}</option>`).join("");
+    return (
+      `<div class="container book__grid">` +
+      `<div class="book__intro">` +
+      sectionHead(num(c, "booking"), S.bookEyebrow, b.title, "booking-title", b.intro) +
+      (b.note ? `<p class="book__note reveal">${icon("info")}<span>${t(b.note)}</span></p>` : "") +
+      `</div>` +
+      `<div class="book reveal" data-book data-days="${b.daysAhead || 14}">` +
+      `<div class="book__offline" data-book-offline><p>${t(S.bookOffline)}</p>` +
+      `<div class="book__offline-actions">` +
+      extLink(c.contact.line.url, `${icon("chat")}${t(S.addLine)}`, "btn btn--primary", S) +
+      `<a class="btn btn--ghost" href="tel:${esc(c.contact.phone)}">${icon("phone")}${t(S.call)} ${esc(c.contact.phoneDisplay)}</a>` +
+      `</div></div>` +
+      `<div class="book__form" data-book-form hidden>` +
+      `<div class="book__row">` +
+      field("book-party", S.bookParty, `<select class="field__input" id="book-party" data-book-party>${party}</select>`) +
+      field("book-date", S.bookDate, `<select class="field__input" id="book-date" data-book-date></select>`) +
+      `</div>` +
+      `<div class="field"><p class="field__label" id="book-time-label">${t(S.bookTime)}</p>` +
+      `<div class="slots" role="radiogroup" aria-labelledby="book-time-label" data-book-slots></div>` +
+      `<p class="book__hint" data-book-slots-msg role="status"></p></div>` +
+      `<div class="book__row">` +
+      field("book-name", S.bookName, `<input class="field__input" id="book-name" type="text" autocomplete="given-name" maxlength="40" data-book-name>`) +
+      field("book-phone", S.bookPhone, `<input class="field__input" id="book-phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" data-book-phone>`) +
+      `</div>` +
+      field("book-note", S.bookNote, `<input class="field__input" id="book-note" type="text" maxlength="200" data-book-note>`) +
+      // Hidden from people; a bot that fills it in is ignored by the server.
+      `<div class="visually-hidden" aria-hidden="true"><label for="book-website">Website</label><input id="book-website" type="text" tabindex="-1" autocomplete="off" data-book-website></div>` +
+      `<p class="book__error" data-book-error role="alert"></p>` +
+      `<button type="button" class="btn btn--primary btn--lg book__submit" data-book-submit>${t(S.bookSubmit)}</button>` +
+      `<p class="book__privacy">${t(S.bookPrivacy)}</p>` +
+      `</div>` +
+      `<div class="book__done" data-book-done hidden tabindex="-1">` +
+      `<p class="book__done-title">${icon("check")}${t(S.bookDoneTitle)}</p>` +
+      `<p class="book__done-when" data-book-done-when></p>` +
+      `<p class="book__code"><span>${t(S.bookDoneCode)}</span><strong data-book-done-code></strong></p>` +
+      `<p class="book__hint">${t(S.bookDoneKeep)}</p>` +
+      `<button type="button" class="btn btn--ghost" data-book-again>${t(S.bookAgain)}</button>` +
+      `</div>` +
+      `<details class="manage" data-manage hidden><summary>${t(S.manageTitle)}</summary>` +
+      `<div class="book__row">` +
+      field("manage-code", S.manageCode, `<input class="field__input" id="manage-code" type="text" autocomplete="off" autocapitalize="characters" maxlength="12" data-manage-code>`) +
+      field("manage-phone", S.bookPhone, `<input class="field__input" id="manage-phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" data-manage-phone>`) +
+      `</div>` +
+      `<button type="button" class="btn btn--ghost" data-manage-check>${t(S.manageCheck)}</button>` +
+      `<div class="manage__result" data-manage-result role="status"></div>` +
+      `<button type="button" class="btn btn--ghost manage__cancel" data-manage-cancel hidden>${t(S.manageCancel)}</button>` +
+      `</details>` +
+      `</div></div>`
+    );
+  };
+
   sections.story = function (c) {
     const S = strings(c);
     const st = c.story;
@@ -412,7 +515,7 @@
       `<div class="container story__grid">` +
       `<figure class="story__media reveal">${picture(c, st.photo, { sizes: "(min-width: 900px) 42vw, 88vw", cls: "arch" })}</figure>` +
       `<div class="story__text">` +
-      `<p class="eyebrow eyebrow--light reveal"><span class="eyebrow__num">04</span><span class="eyebrow__rule" aria-hidden="true"></span>${t(S.storyEyebrow)}</p>` +
+      `<p class="eyebrow eyebrow--light reveal"><span class="eyebrow__num">${num(c, "story")}</span><span class="eyebrow__rule" aria-hidden="true"></span>${t(S.storyEyebrow)}</p>` +
       `<h2 class="section-title reveal" id="story-title">${t(st.title)}</h2>` +
       st.body.map((p, i) => `<p class="story__p ${i === 0 ? "story__p--lead" : ""} reveal">${t(p)}</p>`).join("") +
       (st.signoff ? `<p class="story__signoff reveal">${t(st.signoff)}</p>` : "") +
@@ -439,7 +542,7 @@
       .join("");
     return (
       `<div class="container">` +
-      sectionHead("05", S.galleryEyebrow, g.title, "gallery-title") +
+      sectionHead(num(c, "gallery"), S.galleryEyebrow, g.title, "gallery-title") +
       `<ul class="gallery" role="list" data-stagger>${items}</ul></div>`
     );
   };
@@ -463,7 +566,7 @@
       .join("");
     return (
       `<div class="container">` +
-      sectionHead("06", S.reviewsEyebrow, r.title, "reviews-title") +
+      sectionHead(num(c, "reviews"), S.reviewsEyebrow, r.title, "reviews-title") +
       (r.isSample ? `<p class="sample-flag reveal">${icon("info")}${t(S.sampleReviews)}</p>` : "") +
       `<div class="carousel reveal" data-carousel>` +
       `<div class="carousel__track" tabindex="0" role="region" ${attr("aria-label", S.reviewsRegion)}>${slides}</div>` +
@@ -503,7 +606,7 @@
     return (
       `<div class="container contact__grid">` +
       `<div class="contact__main">` +
-      sectionHead("07", S.contactEyebrow, cs.title, "contact-title", cs.intro) +
+      sectionHead(num(c, "contact"), S.contactEyebrow, cs.title, "contact-title", cs.intro) +
       `<ul class="tiles" role="list" data-stagger>` +
       tile(`tel:${k.phone}`, "phone", S.call, esc(k.phoneDisplay), false) +
       tile(k.line.url, "chat", S.line, esc(k.line.id), true) +

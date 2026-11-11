@@ -1,10 +1,13 @@
 {
   "name": "sample-cafe-template",
   "private": true,
-  "description": "Project tools. The website itself (in /site) has no dependencies.",
+  "description": "Project tools + the booking backend. The website itself (in /site) has no dependencies.",
   "scripts": {
     "serve": "node tools/serve.mjs",
     "bake": "node tools/bake.mjs",
     "test": "node --test tools/tests/ && node tools/tests/contrast.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.9"
   }
 }

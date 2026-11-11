@@ -12,8 +12,9 @@
    So it never invents a price, but it is not a chatbot: it understands
    questions about the shop and pre-orders, and says so when it doesn't.
    Browsers without speech recognition (e.g. Firefox) get the same assistant
-   as a text chat. Nothing is ordered automatically: the order card ends with
-   a "Send on LINE" button the visitor taps themselves.
+   as a text chat. Nothing is ordered automatically: the visitor confirms on
+   the order card ("Place order" when the backend is there, see booking.js and
+   backend/core.mjs; otherwise "Send on LINE").
    Contents
      1. Setup + strings          5. The brain (understand + answer)
      2. Menu catalog + matching  6. Voice (listen + speak)
@@ -77,6 +78,17 @@
       th: "ยังไม่ได้ส่ง กดปุ่มเพื่อส่งรายการให้ร้านทางไลน์",
       en: "Not sent yet. Tap the button to send this to the shop on LINE.",
     },
+    notSentApi: {
+      th: "ยังไม่ได้ส่ง ใส่ชื่อกับเบอร์โทรแล้วกดยืนยันสั่งซื้อ จ่ายเงินที่ร้านตอนมารับ",
+      en: "Not sent yet. Add your name and phone, then tap Place order. You pay at the cafe on pickup.",
+    },
+    phone: { th: "เบอร์โทร", en: "Phone" },
+    place: { th: "ยืนยันสั่งซื้อ", en: "Place order" },
+    orLine: { th: "หรือส่งทางไลน์", en: "or send on LINE" },
+    placed: { th: "ร้านได้รับออเดอร์แล้ว", en: "The cafe has your order" },
+    placedCode: { th: "รหัสออเดอร์", en: "Order code" },
+    placedPay: { th: "จ่ายเงินที่ร้านตอนมารับ แจ้งรหัสนี้กับพนักงาน", en: "Pay at the cafe on pickup and show this code." },
+    needPickup: { th: "บอกเวลามารับก่อนนะคะ เช่น รับบ่ายสาม", en: "Please say a pickup time first, for example \"pickup at 3 pm\"." },
     hot: { th: "ร้อน", en: "hot" },
     iced: { th: "เย็น", en: "iced" },
     you: { th: "คุณ", en: "You" },
@@ -85,6 +97,7 @@
       { th: "ตอนนี้เปิดไหม", en: "Are you open now?" },
       { th: "ไปร้านยังไง", en: "How do I get there?" },
       { th: "สั่งล่วงหน้า", en: "Pre-order" },
+      { th: "จองโต๊ะ", en: "Book a table" },
     ],
   };
 
@@ -289,12 +302,16 @@
     },
   };
 
+  // What the backend offers (filled in once booking.js has asked it).
+  let backend = { online: false, booking: false, orders: false };
+  if (window.ShopApi) window.ShopApi.ready.then((h) => { backend = h; renderOrder(); });
+
   // The pre-order being built: lines of { item, qty, variant, sum }.
   let order = null;
   const baht = (n, L) => `${n} ${L === "th" ? "บาท" : "baht"}`;
   function recalc() {
     if (order && !order.lines.length) order = null;
-    if (order) {
+    if (order && !order.placed) {
       order.lines.forEach((l) => { l.sum = unitPrice(l.item, l.variant) * l.qty; });
       order.total = order.lines.reduce((sum, l) => sum + l.sum, 0);
     }
@@ -345,7 +362,38 @@
       p.appendChild(val);
       box.appendChild(p);
     });
-    const send = el("a", "btn btn--primary cg-order__send", `${icon("chat")}<span>${R.t(T.sendLine)}</span>`);
+    if (order.placed) { // sent to the cafe: show the code, nothing left to confirm
+      box.append(
+        el("p", "cg-order__placed", `${icon("check")}<span>${R.t(T.placed)}</span>`),
+        el("p", "cg-order__code", `<span>${R.t(T.placedCode)}</span><strong>${R.esc(order.placed)}</strong>`),
+        el("p", "cg-order__hint", R.t(T.placedPay))
+      );
+      ui.scroll.scrollTop = ui.scroll.scrollHeight;
+      return;
+    }
+    const useApi = backend.orders;
+    if (useApi) {
+      const fields = el("div", "cg-order__fields");
+      const input = (key, text, type, auto) => {
+        const wrap = el("label", "cg-order__field", `<span>${R.t(text)}</span>`);
+        const field = document.createElement("input");
+        field.type = type;
+        field.maxLength = type === "tel" ? 20 : 40;
+        field.autocomplete = auto;
+        field.value = order[key] || "";
+        field.addEventListener("input", () => { order[key] = field.value; });
+        wrap.appendChild(field);
+        return wrap;
+      };
+      fields.append(input("name", T.name, "text", "given-name"), input("phone", T.phone, "tel", "tel"));
+      const error = el("p", "cg-order__error");
+      error.setAttribute("role", "alert");
+      const place = el("button", "btn btn--primary cg-order__place", R.t(T.place));
+      place.type = "button";
+      place.addEventListener("click", () => placeOrder(place, error));
+      box.append(fields, error, place);
+    }
+    const send = el("a", useApi ? "cg-link cg-order__send" : "btn btn--primary cg-order__send", useApi ? R.t(T.orLine) : `${icon("chat")}<span>${R.t(T.sendLine)}</span>`);
     send.target = "_blank";
     send.rel = "noopener";
     send.href = lineOrderUrl();
@@ -357,8 +405,31 @@
     );
     const actions = el("div", "cg-order__actions");
     actions.append(send, copyBtn);
-    box.append(actions, el("p", "cg-order__hint", R.t(T.notSent)));
+    box.append(actions, el("p", "cg-order__hint", R.t(useApi ? T.notSentApi : T.notSent)));
     ui.scroll.scrollTop = ui.scroll.scrollHeight;
+  }
+
+  // "Place order": send it to the backend, which checks the prices and hours again.
+  async function placeOrder(button, error) {
+    const L = lang();
+    if (!order.pickup) { error.innerHTML = R.t(T.needPickup); return; }
+    button.disabled = true;
+    error.textContent = "";
+    const result = await window.ShopApi.placeOrder({
+      items: order.lines.map((l) => ({ item: l.item.en, qty: l.qty, variant: l.variant })),
+      time: order.pickup, name: order.name, phone: order.phone, lang: L,
+    });
+    button.disabled = false;
+    if (result.error) { error.innerHTML = R.t(result.message); return; }
+    order.placed = result.order.code;
+    order.total = result.order.total;
+    renderOrder();
+    const said = L === "th"
+      ? `ร้านได้รับออเดอร์แล้วค่ะ รหัส ${order.placed} รับ ${order.pickup} น. จ่ายเงินที่ร้านตอนมารับได้เลยค่ะ`
+      : `The cafe has your order. Your code is ${order.placed}, pickup at ${order.pickup}. You pay at the cafe.`;
+    addLine("agent", said);
+    speak(said.replace(order.placed, order.placed.split("").join(" ")), L);
+    ctx.offer = null;
   }
 
   /* ------------------------------------------------------------ 5. The brain
@@ -432,6 +503,11 @@
     const lines = order.lines.map((l) => `${l.item[L]}${l.variant ? " " + T[l.variant][L] : ""} ${l.qty}`).join(L === "th" ? " " : ", ");
     const base = L === "th" ? `ได้ค่ะ ${lines} รวม ${order.total} บาท` : `Got it: ${lines}. That's ${order.total} baht`;
     if (closing) {
+      if (backend.orders) {
+        return base + (L === "th"
+          ? `ค่ะ${order.pickup ? ` รับ ${order.pickup}` : ""} ใส่ชื่อกับเบอร์โทรในการ์ด แล้วกดยืนยันสั่งซื้อได้เลยนะคะ ยังไม่ได้ส่งจนกว่าจะกดค่ะ`
+          : `${order.pickup ? `, pickup ${order.pickup}` : ""}. Add your name and phone on the card and tap Place order. It isn't sent until you tap.`);
+      }
       return base + (L === "th"
         ? `ค่ะ${order.pickup ? ` รับ ${order.pickup}` : ""} กดปุ่มส่งทางไลน์ในการ์ดเพื่อส่งให้ร้านได้เลยนะคะ ยังไม่ได้ส่งจนกว่าจะกดค่ะ`
         : `${order.pickup ? `, pickup ${order.pickup}` : ""}. Tap Send on LINE on the card to send it to the shop. It isn't sent until you tap.`);
@@ -442,7 +518,7 @@
   const askVariant = (item, L) => (L === "th" ? `${item.th} รับร้อนหรือเย็นดีคะ` : `Would you like the ${item.en} hot or iced?`);
 
   function addToOrder(item, qty, variant) {
-    if (!order) order = { lines: [], total: 0, pickup: "", name: "" };
+    if (!order || order.placed) order = { lines: [], total: 0, pickup: "", name: "", phone: "" };
     const v = twoPrices(item) ? variant : "";
     const same = order.lines.find((l) => l.item === item && (!v || !l.variant || l.variant === v));
     if (same) { same.qty = Math.min(20, same.qty + qty); if (v) same.variant = v; return same; }
@@ -472,6 +548,15 @@
     /* Language */
     if (has(q, /ภาษาอังกฤษ|speak english|in english|english please/i)) { page.lang("en"); return "Sure, English it is. What can I get you?"; }
     if (has(q, /ภาษาไทย|พูดไทย|speak thai|in thai/i)) { page.lang("th"); return "ได้ค่ะ คุยภาษาไทยกันนะคะ รับอะไรดีคะ"; }
+
+    /* Table bookings: fill in the form on the page; the visitor types name + phone and confirms */
+    if (has(q, /ยกเลิก.*จอง|เช็ค.*จอง|ตรวจ.*จอง|เลื่อน.*จอง|(cancel|check|change|move) (my |the |a )?(booking|reservation|table)/i)) {
+      page.section("#booking");
+      const box = $("[data-manage]");
+      if (box && !box.hidden) box.open = true;
+      return say("ตรวจสอบหรือยกเลิกได้ที่หน้าจองเลยค่ะ ใส่รหัสการจองกับเบอร์โทรที่ใช้จอง", "You can check or cancel it in the booking section: enter your booking code and the phone number you used.");
+    }
+    if (has(q, /จองโต๊ะ|จองที่|จองคิว|ขอจอง|อยากจอง|จะจอง|book(ing)? (a |the )?table|\breserv|table for|\bbook\b/i)) return bookTable(q, L);
 
     /* Cancel the whole order */
     if (order && has(q, /ยกเลิก|ไม่เอาแล้ว|ล้างรายการ|cancel|clear (the |my )?order|start over|never ?mind/i) && !findItem(q)) {
@@ -629,6 +714,62 @@
     return say(
       "ขอโทษค่ะ เรื่องนี้ยังตอบไม่ได้ ถามเรื่องเมนู เวลาเปิดปิด เส้นทาง หรือสั่งล่วงหน้าได้ค่ะ ถ้าเป็นเรื่องอื่น ทักไลน์ร้านได้เลยนะคะ",
       "Sorry, I can't help with that one. I can tell you about the menu, opening hours and directions, or take a pre-order. For anything else, please message the shop on LINE.");
+  }
+
+  // "จองโต๊ะ 2 คน พรุ่งนี้ 10 โมง" → open the booking form with that filled in.
+  function bookTable(q, L) {
+    const say = (th, en) => (L === "th" ? th : en);
+    const api = window.ShopApi;
+    if (!api || !backend.booking || !(C.booking && C.booking.enabled)) {
+      page.section("#contact");
+      return say(`จองโต๊ะได้ทางไลน์ ${C.contact.line.id} หรือโทร ${C.contact.phoneDisplay} ค่ะ`, `You can book a table on LINE at ${C.contact.line.id} or by phone on ${C.contact.phoneDisplay}.`);
+    }
+    const time = takeTime(q);
+    const rest = time ? time.rest : q;
+    const pm = /(\d{1,2}|หนึ่ง|สอง|สาม|สี่|ห้า|หก|เจ็ด|แปด|เก้า|สิบ)\s*(คน|ท่าน|ที่)|(?:for|of)\s+(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\b|(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:people|persons|guests|pax|of us)/i.exec(rest);
+    const party = pm ? num(pm[1] || pm[3] || pm[4]) : null;
+    const today = api.shopToday();
+    let date = "";
+    const dayKey = Object.keys(DAY_WORDS).find((d) => DAY_WORDS[d].test(rest));
+    const dom = /วันที่\s*(\d{1,2})|on the (\d{1,2})/i.exec(rest);
+    if (has(rest, /มะรืน|day after tomorrow/i)) date = api.addDays(today, 2);
+    else if (has(rest, /พรุ่งนี้|tomorrow/i)) date = api.addDays(today, 1);
+    else if (has(rest, /วันนี้|today|tonight/i)) date = today;
+    else if (dayKey || dom) {
+      for (let i = 0; i < 31 && !date; i++) {
+        const d = api.addDays(today, i);
+        const utc = new Date(d + "T00:00:00Z");
+        if (dayKey ? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][utc.getUTCDay()] === dayKey : utc.getUTCDate() === parseInt(dom[1] || dom[2], 10)) date = d;
+      }
+    }
+    const max = C.booking.maxParty || 6;
+    if (party && party > max) {
+      page.section("#contact");
+      return say(`จองออนไลน์ได้ไม่เกิน ${max} ท่านค่ะ กลุ่มใหญ่กว่านี้ทักไลน์ ${C.contact.line.id} ได้เลยนะคะ`, `Online booking is for up to ${max} guests. For a bigger group, please message us on LINE at ${C.contact.line.id}.`);
+    }
+    page.section("#booking");
+    if (date && !api.isOpen(date)) {
+      api.prefill({ party });
+      return say(`${api.dateLabel(date, "th")} ร้านหยุดค่ะ เลือกวันอื่นในหน้าจองบนจอได้เลยนะคะ`, `We're closed on ${api.dateLabel(date, "en")}. Please pick another day in the booking form on your screen.`);
+    }
+    const wanted = time ? `${pad(time.h)}:${pad(time.m)}` : "";
+    api.prefill({ party, date, time: wanted }).then((r) => {
+      if (!r.ok || (r.dateOk && r.timeOk)) return;
+      // Told after looking it up: the day is too far ahead, or that time is taken.
+      const note = !r.dateOk
+        ? say(`จองล่วงหน้าได้ไม่เกิน ${C.booking.daysAhead || 14} วันค่ะ เลือกวันในหน้าจองได้เลย`, `You can book up to ${C.booking.daysAhead || 14} days ahead. Please pick a day in the form.`)
+        : say(`เวลา ${wanted} น. จองไม่ได้หรือเต็มแล้วค่ะ เลือกเวลาอื่นบนหน้าจอได้เลยนะคะ`, `${wanted} isn't available. Please pick another time on your screen.`);
+      addLine("agent", note);
+      speak(note, L, () => { if (voiceMode && !panel.hidden) listen(); });
+    });
+    const bits = [
+      party ? say(`${party} ท่าน`, `${party} ${party === 1 ? "guest" : "guests"}`) : "",
+      date ? api.dateLabel(date, L).replace(" · ", " ") : "",
+      wanted ? say(`${wanted} น.`, `at ${wanted}`) : "",
+    ].filter(Boolean).join(" ");
+    return say(
+      `เปิดหน้าจองโต๊ะให้แล้วค่ะ${bits ? ` ใส่ ${bits} ไว้ให้แล้ว` : ""} ${wanted ? "" : "เลือกเวลา "}ใส่ชื่อกับเบอร์โทร แล้วกดยืนยันการจองได้เลยค่ะ`.replace(/\s+/g, " "),
+      `I've opened the booking form${bits ? ` and filled in ${bits}` : ""}. ${wanted ? "Add" : "Pick a time, add"} your name and phone, then tap Confirm booking.`);
   }
 
   function applyMeta(time, nameMatch) {

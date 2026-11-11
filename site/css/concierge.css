@@ -105,6 +105,20 @@
 .cg-order__meta { color: var(--c-ink-soft); font-size: 0.875rem; }
 .cg-order__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.9rem; margin-top: 0.7rem; }
 .cg-order__send { min-height: 2.75rem; padding-block: 0.5rem; }
+.cg-order__fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.7rem; }
+.cg-order__field { display: grid; gap: 0.2rem; min-width: 0; font-size: 0.8125rem; font-weight: 600; }
+.cg-order__field input {
+  width: 100%; min-height: 2.75rem; padding: 0.4rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--c-ink) 45%, transparent); border-radius: var(--radius-sm);
+  background: var(--c-bg); color: var(--c-ink); font: inherit; font-size: 1rem; font-weight: 400;
+}
+.cg-order__error { margin-top: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+.cg-order__error:empty { display: none; }
+.cg-order__place { width: 100%; margin-top: 0.6rem; min-height: 2.9rem; }
+.cg-order__placed { display: flex; align-items: center; gap: 0.45rem; margin-top: 0.7rem; font-weight: 600; }
+.cg-order__code { display: grid; gap: 0.1rem; margin-top: 0.5rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); background: var(--c-bg); }
+.cg-order__code span { font-size: 0.8125rem; color: var(--c-ink-soft); }
+.cg-order__code strong { font-size: 1.4rem; letter-spacing: 0.12em; }
 .cg-order__hint { margin-top: 0.35rem; font-size: 0.8125rem; line-height: 1.5; color: var(--c-ink-soft); }
 
 /* ------------------------------------------------------- chips + input */
@@ -156,3 +170,6 @@
   }
 }
 @media print { .cg-launch, .cg-panel { display: none !important; } }
+
+/* While someone is typing in the booking form, the Talk button steps aside. */
+html:has(.book .field__input:focus) .cg-launch { opacity: 0; pointer-events: none; }

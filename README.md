@@ -13,11 +13,10 @@ owner's permission.
 
 ```
 sample-cafe/
-├── site/                  ← THE WEBSITE. This is the folder you drag onto Netlify.
+├── site/                  ← THE WEBSITE (what visitors download).
 │   ├── config.js          ← edit this for each shop
 │   ├── index.html         ← page skeleton (filled from config by the bake step)
 │   ├── 404.html           ← "page not found" (generated)
-│   ├── netlify.toml       ← security + cache headers (Netlify)
 │   ├── vercel.json        ← the same headers (Vercel)
 │   ├── css/  js/  assets/ ← styles, scripts, fonts, photos
 │   └── robots.txt, sitemap.xml, site.webmanifest, icons (generated)
@@ -146,32 +145,31 @@ original.
 
 ---
 
-## Deploy to Netlify (drag and drop)
+## Deploy to Netlify (website + booking backend)
 
-1. Run `node tools/bake.mjs` one last time.
-2. Go to https://app.netlify.com/drop (log in or create a free account).
-3. Drag the **`site`** folder (not the whole project) onto the page. Wait about 30 seconds.
-4. Netlify gives you a random address. Click **Site configuration → Change site name** to get
-   e.g. `somchai-coffee.netlify.app`.
-5. If the address changed, update `site.url` in `config.js`, run `node tools/bake.mjs`, and drag the
-   folder again: **Deploys → drag a new folder onto the deploy area** (this updates the same site).
-6. **Check the security headers arrived:**
-   ```bash
-   curl -I https://somchai-coffee.netlify.app
-   ```
-   You should see `content-security-policy`, `x-frame-options` and `referrer-policy`. If they are
-   missing, `netlify.toml` wasn't read:
-   - Make sure it is directly inside the `site` folder you dropped, not in a sub-folder.
-   - If it still doesn't work, move the same `[[headers]]` rules into a file called `_headers`
-     in `site/` (Netlify's other header format: search "custom headers" on
-     https://docs.netlify.com). Or deploy from GitHub: connect the repo
-     and set the publish directory to `site`. Both of those always apply headers.
-   - The site still works without the headers. It just loses the extra security layer.
-7. Test the live site with https://pagespeed.web.dev (choose "Mobile").
-8. Optional: **Domain management → Add a domain** to use the shop's own domain. HTTPS is free and
+The booking system needs Netlify's functions, so deploy with Netlify's command-line tool from the
+**project folder** (not by dragging the `site` folder: that publishes the pages without the backend).
+
+```bash
+npm install                                   # once: the one backend package
+npx netlify-cli login                         # once, opens the browser
+npx netlify-cli sites:create --name <shop-name>     # once per shop (or: npx netlify-cli link)
+npx netlify-cli env:set ADMIN_KEY "<a long secret>" # once: the staff key for /admin.html
+node tools/bake.mjs
+npx netlify-cli deploy --prod
+```
+
+1. `netlify.toml` (in the project folder) tells Netlify that `site/` is the website and
+   `netlify/functions/` is the backend, and sets the security headers.
+2. Put the address in `site.url` in `config.js`, bake, and deploy again.
+3. Check it: `curl -I https://<address>` should show `content-security-policy`, and
+   `https://<address>/api/health` should answer `{"ok":true,...}`.
+4. Test the live site with https://pagespeed.web.dev (choose "Mobile").
+5. Optional: **Domain management → Add a domain** to use the shop's own domain. HTTPS is free and
    automatic.
 
-Updating later: edit config → bake → drag the `site` folder onto the site's **Deploys** page.
+Updating later: edit config → `node tools/bake.mjs` → `npx netlify-cli deploy --prod`.
+After changing `ADMIN_KEY`, deploy again: functions read it at deploy time.
 
 > **Note (November 2026):** Netlify's free plan now adds a "Hosted on Netlify" badge script to
 > every page. This site's security policy blocks it, so the badge doesn't show, but the browser
@@ -232,6 +230,47 @@ Tip: keep `tools/node_modules` out of OneDrive, or pause syncing while installin
 | "Open now" is wrong | Check `hours.weekly` uses 24-hour `"HH:MM"`; the time zone is `Asia/Bangkok`. |
 | A word (e.g. "Müller", "€", Japanese) shows in a different-looking font | The fonts include all Thai letters but only basic English letters and a few symbols, so other characters fall back to the phone's font. See "Fonts" in HOW_IT_WORKS.md to add them. |
 
+## Booking system (free, optional)
+
+A real backend, with no monthly cost: it runs on Netlify Functions and keeps its data in Netlify
+Blobs, both included in Netlify's free plan.
+
+- **Reserve a table** (the section after the menu): the visitor picks guests, day and time, and is
+  confirmed at once with a code. Seats are limited by `booking.seats` in `config.js`; a time that is
+  full cannot be chosen.
+- **Pre-orders**: the voice concierge builds the order; "Place order" sends it to the cafe with a
+  pickup time and returns a code. The server prices the order from the menu in `config.js`, so a
+  visitor cannot send their own total. Payment is at the cafe.
+- **Check or cancel**: with the code and the phone number used.
+- **Staff dashboard**: `/admin.html`, with the staff key (`ADMIN_KEY`). One day at a time: bookings,
+  guests, orders, order total, and buttons to seat, accept, mark ready, and so on.
+- **By voice**: "จองโต๊ะ 2 คน พรุ่งนี้ 10 โมง" or "book a table for two tomorrow at 10" opens the
+  form with that filled in. The visitor types the name and phone and confirms.
+
+What you should know:
+
+- **Personal data**: it stores a name, a phone number and an optional note for each booking or
+  order, and deletes them 30 days after the date. A real shop needs to say so in its privacy
+  notice, and the owner is responsible for that data.
+- **The staff key is a password.** Anyone who has it can see customers' names and phone numbers.
+  Keep it out of the code and out of chats; change it with `netlify env:set` if it leaks.
+- **Limits**: one visitor can make 6 bookings/orders an hour, and 10 wrong staff keys an hour.
+- **No payments, no notifications.** Staff see new bookings by opening the dashboard (it refreshes
+  every 30 seconds). There is no email, SMS or LINE message to the shop or the customer.
+- **Two people booking the very last seats in the same second** could both get through: the free
+  storage has no locking. For a small cafe that is rare; the dashboard shows it if it happens.
+- **Other hosts**: on Vercel (static only) the form turns into "book on LINE" by itself and
+  pre-orders go to LINE as before.
+- Rules live in `backend/core.mjs`; `node tools/bake.mjs` writes `backend/shop.generated.mjs`
+  (prices, hours, booking settings) from `config.js`. Turn things off with `booking.enabled` and
+  `orders.enabled`.
+
+Try it on your computer: `node tools/serve.mjs` runs the same backend with the data in memory
+(staff key `local-admin`). Tests: `node --test tools/tests/api.test.mjs` (the rules) and
+`node tools/tests/booking.mjs` (in a browser; start the server with `node tools/serve.mjs --test`).
+
+---
+
 ## Voice concierge (free, optional)
 
 A "Talk to us" button: visitors speak or type in Thai or English, the
@@ -256,4 +295,4 @@ understand.
 - The security headers (`vercel.json`, `netlify.toml`) allow the microphone
   on this site only (`microphone=(self)`).
 - Turn it off with `concierge.enabled: false`. Tests:
-  `node tools/tests/concierge.mjs`.
+  `node tools/tests/concierge.mjs` (start the server with `node tools/serve.mjs --test`).
